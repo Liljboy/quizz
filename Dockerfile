@@ -5,15 +5,17 @@ COPY . .
 RUN mvn clean package -DskipTests
 
 # Étape d'exécution
-FROM eclipse-temurin:21-jr-jammy
+# Correction ici : jre au lieu de jr
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-# Création du dossier de données pour H2
-RUN mkdir -p /app/data && chmod 777 /app/data
+# Création du dossier pour la base H2
+RUN mkdir -p /data
 
+# Copie du jar depuis l'étape build
 COPY --from=build /app/target/*.jar app.jar
 
-# Port dynamique
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Utilisation du port dynamique Render
+ENTRYPOINT ["java", "-Dserver.port=${PORT:8080}", "-jar", "app.jar"]
