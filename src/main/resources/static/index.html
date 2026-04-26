@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainByte - Apprendre en S'amusant</title>
+    <link rel="stylesheet" href="global.css">
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+
+    <!-- Header Fixe -->
+    <nav class="navbar">
+        <a href="index.html" class="logo">BrainByte</a>
+
+        <ul class="nav-menu">
+            <li><a href="#" class="nav-link" onclick="loadQuizzes('Histoire')">Histoire</a></li>
+            <li><a href="#" class="nav-link" onclick="loadQuizzes('Mathématique')">Mathématique</a></li>
+            <li><a href="#" class="nav-link" onclick="loadQuizzes('Physique')">Physique</a></li>
+            <li><a href="#" class="nav-link" onclick="loadQuizzes('Biologie')">Biologie</a></li>
+            <li><a href="#" class="nav-link" onclick="loadQuizzes('Informatique')">Informatique</a></li>
+        </ul>
+
+        <div class="nav-auth" id="auth-section">
+            <!-- Injecté par JS -->
+            <a href="login.html" class="btn btn-login">Connexion</a>
+            <a href="register.html" class="btn btn-primary">S'inscrire</a>
+        </div>
+    </nav>
+
+    <!-- Section Hero -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1>Explorez, Apprenez,<br>Maîtrisez.</h1>
+            <p>La plateforme de quiz interactive pour tester vos connaissances dans toutes les disciplines. Prêt à
+                relever le défi ?</p>
+            <div class="hero-btns">
+                <a href="#quiz-grid-section" class="btn btn-primary"
+                    style="padding: 1rem 2rem; font-size: 1.1rem;">Commencer Maintenant</a>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="brain-schema">
+                <div class="node node-1 pulse"></div>
+                <div class="node node-2"></div>
+                <div class="node node-3"></div>
+                <div class="node node-4"></div>
+                <div class="connector c1"></div>
+                <div class="connector c2"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section Quiz -->
+    <section id="quiz-grid-section" style="padding: 4rem 0;">
+        <div class="section-title">
+            <h2 id="current-category">Nos Quiz Récents</h2>
+            <p>Choisissez un sujet et testez-vous dès maintenant.</p>
+        </div>
+
+        <div class="quiz-grid" id="quiz-grid">
+            <!-- Injecté par JS -->
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <h2>BrainByte</h2>
+                <p>Apprendre n'a jamais été aussi simple et interactif.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Quiz</h4>
+                <ul>
+                    <li><a href="#" onclick="loadQuizzes('Informatique')">Informatique</a></li>
+                    <li><a href="#" onclick="loadQuizzes('Mathématique')">Mathématique</a></li>
+                    <li><a href="#" onclick="loadQuizzes('Physique')">Physique</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Plateforme</h4>
+                <ul>
+                    <li><a href="profile.html">Mon Profil</a></li>
+                    <li><a href="login.html">Connexion</a></li>
+                    <li><a href="register.html">Inscription</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>BrainByte</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            updateHeader();
+            loadQuizzes();
+        });
+
+        function updateHeader() {
+            const userId = localStorage.getItem('userId');
+            const authSection = document.getElementById('auth-section');
+
+            if (userId) {
+                const pseudo = localStorage.getItem('pseudo') || 'Profil';
+                authSection.innerHTML = `
+                    <a href="profile.html" class="nav-link" style="margin-right: 1.5rem;">${pseudo}</a>
+                    <button onclick="logout()" class="btn btn-logout" style="background:none; border:none; font:inherit; cursor:pointer;">Déconnexion</button>
+                `;
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.reload();
+        }
+
+        async function loadQuizzes(category = '') {
+            const grid = document.getElementById('quiz-grid');
+            const title = document.getElementById('current-category');
+
+            if (category) title.textContent = `Quiz : ${category}`;
+            else title.textContent = "Tous nos Quiz";
+
+            try {
+                let url = '/api/quiz';
+                if (category) url += `?categorie=${category}`;
+
+                const res = await fetch(url);
+                const quizzes = await res.json();
+                console.log("Quiz reçus pour", category, ":", quizzes);
+
+                if (category) {
+                    document.getElementById('quiz-grid-section').scrollIntoView({ behavior: 'smooth' });
+                }
+
+                if (quizzes.length === 0) {
+                    grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; padding: 4rem;">Aucun quiz disponible dans cette catégorie pour le moment.</p>`;
+                    return;
+                }
+
+                grid.innerHTML = quizzes.map(q => `
+                    <div class="quiz-card" onclick="window.location.href='quiz.html?id=${q.id}'">
+                        <span class="cat-tag">${q.categorie || 'Général'}</span>
+                        <h3>${q.titre}</h3>
+                        <p>${q.description || 'Testez vos compétences sur ce sujet passionnant.'}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                grid.innerHTML = '<p>Erreur lors du chargement des quiz.</p>';
+            }
+        }
+    </script>
+</body>
+
+</html>

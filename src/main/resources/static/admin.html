@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainByte - Dashboard Admin</title>
+    <link rel="stylesheet" href="global.css">
+    <link rel="stylesheet" href="profile.css">
+    <style>
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .recent-table {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--box-shadow);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-cat { background: var(--accent); color: var(--primary); }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">BrainByte <span style="font-size: 0.8rem; color: var(--text-muted);">Admin</span></a>
+        <div class="nav-auth">
+            <a href="index.html" class="nav-link">Voir le Site</a>
+            <button onclick="logout()" class="btn btn-logout" style="background:none; border:none; font:inherit; cursor:pointer; margin-left: 1rem;">Déconnexion</button>
+        </div>
+    </nav>
+
+    <main class="profile-container">
+
+        <header class="profile-header">
+            <h1>Tableau de Bord Admin</h1>
+            <p>Gestion globale de la plateforme BrainByte.</p>
+        </header>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <span class="val" id="stat-users">0</span>
+                <span class="label">Utilisateurs</span>
+            </div>
+            <div class="stat-card">
+                <span class="val" id="stat-quizzes">0</span>
+                <span class="label">Total Quiz</span>
+            </div>
+        </section>
+
+        <section class="admin-grid" style="grid-template-columns: 1fr;">
+            <div class="recent-table">
+                <h2>Quiz Récents</h2>
+                <table id="recent-quiz-body">
+                    <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Catégorie</th>
+                            <th>Créateur</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Injecté -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="footer-bottom">
+            <p>&copy; 2026 BrainByte Admin - Mode Sécurisé</p>
+        </div>
+    </footer>
+
+    <script>
+        const isAdmin = localStorage.getItem('isAdmin') === 'true';
+        if (!isAdmin) window.location.href = 'index.html';
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/admin/stats', {
+                    headers: { 'Authorization': localStorage.getItem('token') }
+                });
+                if (!res.ok) throw new Error("Accès refusé");
+                
+                const stats = await res.json();
+
+                document.getElementById('stat-users').textContent = stats.totalUsers;
+                document.getElementById('stat-quizzes').textContent = stats.totalQuizzes;
+
+                const tbody = document.querySelector('#recent-quiz-body tbody');
+                tbody.innerHTML = stats.recentQuizzes.map(q => `
+                    <tr>
+                        <td style="font-weight: 500;">${q.titre}</td>
+                        <td><span class="badge badge-cat">${q.categorie}</span></td>
+                        <td style="color: var(--text-muted); font-size: 0.9rem;">${q.createur ? q.createur.pseudo : 'Admin'}</td>
+                    </tr>
+                `).join('');
+
+            } catch (e) {
+                console.error("Erreur stats admin", e);
+            }
+        }
+
+        loadStats();
+    </script>
+</body>
+
+</html>

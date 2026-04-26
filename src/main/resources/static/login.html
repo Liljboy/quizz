@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainByte - Connexion</title>
+    <link rel="stylesheet" href="global.css">
+    <link rel="stylesheet" href="auth.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">BrainByte</a>
+        <div class="nav-auth">
+            <a href="register.html" class="btn btn-primary">S'inscrire</a>
+        </div>
+    </nav>
+
+    <main class="auth-wrapper">
+        <div class="auth-card">
+            <h1>Accès.</h1>
+
+            <div id="error-msg"></div>
+
+            <form id="login-form">
+                <div class="input-container">
+                    <input type="email" id="email" class="input-field" required>
+                    <label class="input-label" for="email">Adresse email</label>
+                    <div class="focus-line"></div>
+                </div>
+
+                <div class="input-container">
+                    <input type="password" id="password" class="input-field" required>
+                    <label class="input-label" for="password">Mot de passe</label>
+                    <div class="focus-line"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-submit">Se Connecter</button>
+            </form>
+
+            <div class="auth-footer">
+                Pas encore de compte ? <a href="register.html">Créer un compte</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.querySelectorAll('.input-field').forEach(input => {
+            input.addEventListener('input', () => {
+                if (input.value.trim() !== '') input.classList.add('has-value');
+                else input.classList.remove('has-value');
+            });
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errEl = document.getElementById('error-msg');
+            errEl.style.display = 'none';
+
+            const email = document.getElementById('email').value;
+            const motDePasse = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/auth/connexion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, motDePasse })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userId', data.userId);
+                    localStorage.setItem('pseudo', data.pseudo);
+                    localStorage.setItem('isAdmin', data.admin); // Map from boolean
+                    
+                    if (data.admin) {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    const errorMsg = await res.text();
+                    errEl.textContent = errorMsg || "Identifiants invalides";
+                    errEl.style.display = 'block';
+                }
+            } catch (e) {
+                errEl.textContent = "Erreur de connexion au serveur.";
+                errEl.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+
+</html>

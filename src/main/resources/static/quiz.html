@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainByte - Quiz Player</title>
+    <link rel="stylesheet" href="global.css">
+    <link rel="stylesheet" href="quiz.css">
+</head>
+<body>
+
+    <div id="quiz-progress"></div>
+    
+    <a href="index.html" class="btn btn-login exit-quiz">&larr; Quitter l'aventure</a>
+
+    <main class="quiz-layout">
+        
+        <!-- Écran de démarrage -->
+        <div id="start-screen" class="question-view" style="text-align: center;">
+            <h1 class="q-title" id="quiz-title">Chargement du quiz...</h1>
+            <p id="quiz-desc" style="margin-bottom: 2rem; color: var(--text-muted);"></p>
+            <button id="start-btn" class="btn btn-primary" style="padding: 1rem 3rem; font-size: 1.2rem; display:none;">Commencer</button>
+        </div>
+
+        <!-- Moteur de Quiz -->
+        <div id="quiz-screen" class="question-view" style="display: none;">
+            <div id="q-container"></div>
+        </div>
+
+        <!-- Écran Résultats -->
+        <div id="result-screen" class="question-view score-card" style="display: none;">
+            <h1 class="q-title">C'est terminé !</h1>
+            <div class="score-circle" id="score-val">0%</div>
+            <p id="score-msg" style="margin-bottom: 3rem; font-size: 1.2rem;"></p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="location.reload()" class="btn btn-primary">Recommencer</button>
+                <a href="index.html" class="btn btn-login">Retour à l'accueil</a>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const QUIZ_ID = urlParams.get('id');
+        
+        let quizData = null;
+        let currentIndex = 0;
+        let answers = {};
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('quiz-screen').style.display = 'block';
+            showQuestion();
+        });
+
+        async function init() {
+            if(!QUIZ_ID) { window.location.href = 'index.html'; return; }
+            try {
+                const res = await fetch(`/api/quiz/${QUIZ_ID}`);
+                quizData = await res.json();
+                document.getElementById('quiz-title').textContent = quizData.titre;
+                document.getElementById('quiz-desc').textContent = quizData.description || 'Préparez-vous à tester vos connaissances.';
+                document.getElementById('start-btn').style.display = 'inline-block';
+            } catch(e) {
+                document.getElementById('quiz-title').textContent = "Erreur de chargement.";
+            }
+        }
+
+        function showQuestion() {
+            const q = quizData.questions[currentIndex];
+            const progress = (currentIndex / quizData.questions.length) * 100;
+            document.getElementById('quiz-progress').style.width = `${progress}%`;
+
+            const container = document.getElementById('q-container');
+            container.innerHTML = `
+                <div class="slide-in">
+                    <h2 class="q-title">${q.texte}</h2>
+                    <div class="options-list">
+                        ${q.options.map((o, i) => `
+                            <div class="opt" data-id="${o.id}" data-key="${i+1}">
+                                <span class="opt-badge">${i+1}</span>
+                                <span>${o.texte}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <p class="helper-text">Astuce : Utilisez les touches 1, 2, 3... de votre clavier.</p>
+                </div>
+            `;
+
+            document.querySelectorAll('.opt').forEach(el => {
+                el.addEventListener('click', () => select(el.dataset.id));
+            });
+        }
+
+        function select(optId) {
+            const q = quizData.questions[currentIndex];
+            answers[q.id] = optId;
+            
+            const active = document.querySelector(`.opt[data-id="${optId}"]`);
+            active.classList.add('selected');
+
+            setTimeout(() => {
+                const container = document.querySelector('.slide-in');
+                container.classList.remove('slide-in');
+                container.classList.add('slide-out');
+
+                setTimeout(() => {
+                    currentIndex++;
+                    if(currentIndex < quizData.questions.length) {
+                        showQuestion();
+                    } else {
+                        submit();
+                    }
+                }, 400);
+            }, 300);
+        }
+
+        async function submit() {
+            document.getElementById('quiz-progress').style.width = `100%`;
+            const userId = localStorage.getItem('userId');
+            
+            try {
+                const res = await fetch(`/api/quiz/${QUIZ_ID}/soumettre`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ utilisateurId: userId, reponsesSelectionnees: answers })
+                });
+                const result = await res.json();
+                
+                document.getElementById('quiz-screen').style.display = 'none';
+                document.getElementById('result-screen').style.display = 'block';
+                document.getElementById('score-val').textContent = `${Math.round(result.pourcentage)}%`;
+                document.getElementById('score-msg').textContent = result.message;
+            } catch(e) {
+                alert("Erreur lors de l'envoi des résultats.");
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const key = e.key;
+            if(document.getElementById('quiz-screen').style.display === 'block') {
+                const target = document.querySelector(`.opt[data-key="${key}"]`);
+                if(target) target.click();
+            } else if(document.getElementById('start-screen').style.display !== 'none' && key === 'Enter') {
+                document.getElementById('start-btn').click();
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
